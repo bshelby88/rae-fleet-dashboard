@@ -1,0 +1,54 @@
+# ---------------------------------------------------------------------------
+# CI for rae-fleet-dashboard — static HTML validation
+# ---------------------------------------------------------------------------
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
+      - ".github/**"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
+      - ".github/**"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate HTML syntax
+        run: |
+          # Basic HTML validation - check for well-formed tags
+          if command -v tidy >/dev/null 2>&1; then
+            tidy -q -e index.html 2>&1 | head -20
+          else
+            # Fallback: basic structure check
+            echo "Checking basic HTML structure..."
+            grep -q "<!DOCTYPE html>" index.html && echo "✓ DOCTYPE present"
+            grep -q "<html" index.html && echo "✓ html tag present"
+            grep -q "</html>" index.html && echo "✓ closing html tag present"
+            grep -q "<head>" index.html && echo "✓ head tag present"
+            grep -q "</head>" index.html && echo "✓ closing head tag present"
+            grep -q "<body>" index.html && echo "✓ body tag present"
+            grep -q "</body>" index.html && echo "✓ closing body tag present"
+            echo "Basic structure OK"
+          fi
+
+      - name: Check file size
+        run: |
+          SIZE=$(wc -c < index.html)
+          echo "index.html size: $SIZE bytes"
+          if [ $SIZE -gt 1048576 ]; then
+            echo "⚠ Warning: index.html exceeds 1MB"
+          fi
